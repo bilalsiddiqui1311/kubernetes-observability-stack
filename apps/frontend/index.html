@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Local Platform Login</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <main class="shell">
+      <section class="login-panel">
+        <div class="brand-row">
+          <div class="mark">LP</div>
+          <div>
+            <p class="eyebrow">Minikube local platform</p>
+            <h1>Sign in</h1>
+          </div>
+        </div>
+
+        <form id="login-form" class="form">
+          <label>
+            <span>Email</span>
+            <input id="email" name="email" autocomplete="email" value="demo@example.com" />
+          </label>
+          <label>
+            <span>Password</span>
+            <input id="password" name="password" type="password" value="password123" />
+          </label>
+          <button id="login-button" type="submit">Login</button>
+        </form>
+
+        <p id="message" class="message">Use the demo account to generate traces, logs, and metrics.</p>
+      </section>
+
+      <section class="trace-panel">
+        <div class="panel-heading">
+          <p class="eyebrow">Live request path</p>
+          <h2>Login flow</h2>
+        </div>
+        <ol id="timeline" class="timeline">
+          <li data-state="idle">
+            <span class="dot"></span>
+            <div>
+              <strong>Browser</strong>
+              <p>Waiting for login click.</p>
+            </div>
+          </li>
+          <li data-state="idle">
+            <span class="dot"></span>
+            <div>
+              <strong>Auth service</strong>
+              <p>Checks credentials and writes audit row.</p>
+            </div>
+          </li>
+          <li data-state="idle">
+            <span class="dot"></span>
+            <div>
+              <strong>Profile service</strong>
+              <p>Loads profile data from PostgreSQL.</p>
+            </div>
+          </li>
+          <li data-state="idle">
+            <span class="dot"></span>
+            <div>
+              <strong>Observability</strong>
+              <p>Trace, metrics, and logs become available.</p>
+            </div>
+          </li>
+        </ol>
+        <div id="result" class="result" hidden></div>
+      </section>
+    </main>
+    <script src="./app.js"></script>
+  </body>
+</html>
+

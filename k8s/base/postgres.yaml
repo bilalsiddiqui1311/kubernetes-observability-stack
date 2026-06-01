@@ -1,0 +1,123 @@
+apiVersion: v1
+kind: Secret
+metadata:
+  name: postgres-secret
+  namespace: local-app
+type: Opaque
+stringData:
+  POSTGRES_DB: appdb
+  POSTGRES_USER: app
+  POSTGRES_PASSWORD: app-password
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: postgres-init
+  namespace: local-app
+data:
+  init.sql: |
+    create table if not exists users (
+      id serial primary key,
+      email text not null unique,
+      password_hash text not null,
+      display_name text not null,
+      role text not null default 'user',
+      created_at timestamptz not null default now()
+    );
+
+    create table if not exists login_audit (
+      id bigserial primary key,
+      email text not null,
+      user_id integer,
+      success boolean not null,
+      correlation_id text not null,
+      trace_id text,
+      duration_ms integer not null,
+      created_at timestamptz not null default now()
+    );
+
+    insert into users (email, password_hash, display_name, role)
+    values ('demo@example.com', 'password123', 'Demo User', 'admin')
+    on conflict (email) do nothing;
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: postgres-data
+  namespace: local-app
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 1Gi
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: postgres
+  namespace: local-app
+  labels:
+    app: postgres
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: postgres
+  template:
+    metadata:
+      labels:
+        app: postgres
+    spec:
+      containers:
+        - name: postgres
+          image: postgres:16-alpine
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 5432
+          envFrom:
+            - secretRef:
+                name: postgres-secret
+          env:
+            - name: PGDATA
+              value: /var/lib/postgresql/data/pgdata
+          readinessProbe:
+            exec:
+              command:
+                - sh
+                - -c
+                - pg_isready -U "$POSTGRES_USER" -d "$POSTGRES_DB"
+            initialDelaySeconds: 5
+            periodSeconds: 5
+          resources:
+            requests:
+              cpu: 100m
+              memory: 192Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi
+          volumeMounts:
+            - name: data
+              mountPath: /var/lib/postgresql/data
+            - name: init
+              mountPath: /docker-entrypoint-initdb.d
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: postgres-data
+        - name: init
+          configMap:
+            name: postgres-init
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: postgres
+  namespace: local-app
+spec:
+  selector:
+    app: postgres
+  ports:
+    - name: postgres
+      port: 5432
+      targetPort: 5432

@@ -1,0 +1,62 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: profile-service
+  namespace: local-app
+  labels:
+    app: profile-service
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: profile-service
+  template:
+    metadata:
+      labels:
+        app: profile-service
+    spec:
+      containers:
+        - name: profile-service
+          image: local/profile-service:dev
+          imagePullPolicy: Never
+          ports:
+            - containerPort: 8000
+          env:
+            - name: SERVICE_NAME
+              value: profile-service
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: postgres-secret
+                  key: POSTGRES_PASSWORD
+            - name: DATABASE_URL
+              value: postgresql://app:$(POSTGRES_PASSWORD)@postgres.local-app.svc.cluster.local:5432/appdb
+            - name: OTEL_EXPORTER_OTLP_ENDPOINT
+              value: http://otel-collector.observability.svc.cluster.local:4318
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: 8000
+            initialDelaySeconds: 8
+            periodSeconds: 5
+          resources:
+            requests:
+              cpu: 100m
+              memory: 160Mi
+            limits:
+              cpu: 600m
+              memory: 384Mi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: profile-service
+  namespace: local-app
+spec:
+  selector:
+    app: profile-service
+  ports:
+    - name: http
+      port: 8000
+      targetPort: 8000
+

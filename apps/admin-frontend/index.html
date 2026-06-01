@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Admin Frontend</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <main class="admin-shell">
+      <header class="topbar">
+        <div>
+          <p class="eyebrow">Local platform</p>
+          <h1>Admin</h1>
+        </div>
+        <nav>
+          <a href="/">App</a>
+          <a href="http://localhost:3000">Grafana</a>
+          <a href="http://localhost:5601">Kibana</a>
+        </nav>
+      </header>
+
+      <section class="metrics-grid">
+        <article>
+          <span>Users</span>
+          <strong id="users">-</strong>
+        </article>
+        <article>
+          <span>Successful logins</span>
+          <strong id="successful-logins">-</strong>
+        </article>
+        <article>
+          <span>Failed logins</span>
+          <strong id="failed-logins">-</strong>
+        </article>
+        <article>
+          <span>Average login</span>
+          <strong id="avg-login">-</strong>
+        </article>
+      </section>
+
+      <section class="ops-grid">
+        <div class="activity">
+          <div class="section-heading">
+            <p class="eyebrow">Database audit</p>
+            <h2>Latest status</h2>
+          </div>
+          <p id="last-login">Waiting for app traffic.</p>
+        </div>
+        <div class="activity">
+          <div class="section-heading">
+            <p class="eyebrow">Observability links</p>
+            <h2>Dashboards</h2>
+          </div>
+          <ul>
+            <li><a href="http://localhost:3000/d/local-minikube-overview/minikube-overview">Minikube Overview</a></li>
+            <li><a href="http://localhost:3000/d/local-login-flow/app-login-flow">App Login Flow</a></li>
+            <li><a href="http://localhost:9090">Prometheus Targets</a></li>
+            <li><a href="http://localhost:5601">Kibana Logs</a></li>
+          </ul>
+        </div>
+      </section>
+      <p id="status" class="status">Refreshing every five seconds.</p>
+    </main>
+    <script src="./app.js"></script>
+  </body>
+</html>
+

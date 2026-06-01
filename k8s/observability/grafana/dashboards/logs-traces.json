@@ -1,0 +1,115 @@
+{
+  "uid": "local-logs-traces",
+  "title": "Logs and Traces",
+  "tags": [
+    "local-platform"
+  ],
+  "timezone": "browser",
+  "schemaVersion": 39,
+  "version": 1,
+  "refresh": "10s",
+  "time": {
+    "from": "now-1h",
+    "to": "now"
+  },
+  "panels": [
+    {
+      "id": 1,
+      "type": "traces",
+      "title": "Login traces",
+      "gridPos": {
+        "x": 0,
+        "y": 0,
+        "w": 24,
+        "h": 9
+      },
+      "datasource": {
+        "type": "tempo",
+        "uid": "tempo"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "queryType": "traceql",
+          "query": "{ resource.service.name = \"auth-service\" && name =~ \".*login.*\" }"
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "type": "traces",
+      "title": "Database spans",
+      "gridPos": {
+        "x": 0,
+        "y": 9,
+        "w": 12,
+        "h": 8
+      },
+      "datasource": {
+        "type": "tempo",
+        "uid": "tempo"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "queryType": "traceql",
+          "query": "{ name =~ \"db.*\" }"
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "type": "traces",
+      "title": "Profile service spans",
+      "gridPos": {
+        "x": 12,
+        "y": 9,
+        "w": 12,
+        "h": 8
+      },
+      "datasource": {
+        "type": "tempo",
+        "uid": "tempo"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "queryType": "traceql",
+          "query": "{ resource.service.name = \"profile-service\" }"
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "type": "logs",
+      "title": "Application logs",
+      "gridPos": {
+        "x": 0,
+        "y": 17,
+        "w": 24,
+        "h": 9
+      },
+      "datasource": {
+        "type": "elasticsearch",
+        "uid": "elasticsearch"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "query": "platform:local-minikube",
+          "metrics": [
+            {
+              "type": "logs"
+            }
+          ],
+          "bucketAggs": []
+        }
+      ],
+      "options": {
+        "showLabels": true,
+        "showTime": true,
+        "wrapLogMessage": true
+      }
+    }
+  ]
+}

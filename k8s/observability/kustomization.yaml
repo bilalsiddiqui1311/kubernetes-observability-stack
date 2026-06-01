@@ -1,0 +1,36 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - namespace.yaml
+  - tempo.yaml
+  - otel-collector.yaml
+  - prometheus.yaml
+  - grafana.yaml
+  - elk.yaml
+generatorOptions:
+  disableNameSuffixHash: true
+configMapGenerator:
+  - name: grafana-datasources
+    namespace: observability
+    files:
+      - datasources.yaml=grafana/provisioning/datasources/datasources.yaml
+  - name: grafana-dashboard-provider
+    namespace: observability
+    files:
+      - dashboards.yaml=grafana/provisioning/dashboards/dashboards.yaml
+  - name: grafana-dashboards
+    namespace: observability
+    files:
+      - app-database.json=grafana/dashboards/app-database.json
+      - app-login-flow.json=grafana/dashboards/app-login-flow.json
+      - kubernetes-node-kubelet.json=grafana/dashboards/kubernetes-node-kubelet.json
+      - kubernetes-pod-resources.json=grafana/dashboards/kubernetes-pod-resources.json
+      - logs-traces.json=grafana/dashboards/logs-traces.json
+      - minikube-overview.json=grafana/dashboards/minikube-overview.json
+      - namespace-workloads.json=grafana/dashboards/namespace-workloads.json
+  - name: grafana-alerting
+    namespace: observability
+    files:
+      - alert-rules.yaml=grafana/provisioning/alerting/alert-rules.yaml
+      - contact-points.yaml=grafana/provisioning/alerting/contact-points.yaml
+      - notification-policies.yaml=grafana/provisioning/alerting/notification-policies.yaml

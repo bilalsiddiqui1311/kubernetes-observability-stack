@@ -1,0 +1,11 @@
+apiVersion: 1
+contactPoints:
+  - orgId: 1
+    name: local-email
+    receivers:
+      - uid: local-email
+        type: email
+        settings:
+          addresses: ${GRAFANA_ALERT_EMAIL_TO}
+          singleEmail: false
+        disableResolveMessage: false

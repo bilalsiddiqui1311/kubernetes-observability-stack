@@ -1,0 +1,23 @@
+apiVersion: 1
+datasources:
+  - name: Prometheus
+    uid: prometheus
+    type: prometheus
+    access: proxy
+    url: http://prometheus.observability.svc.cluster.local:9090
+    isDefault: true
+  - name: Tempo
+    uid: tempo
+    type: tempo
+    access: proxy
+    url: http://tempo.observability.svc.cluster.local:3200
+  - name: Elasticsearch
+    uid: elasticsearch
+    type: elasticsearch
+    access: proxy
+    url: http://elasticsearch.observability.svc.cluster.local:9200
+    jsonData:
+      index: "[local-app-]YYYY.MM.DD"
+      interval: Daily
+      timeField: "@timestamp"
+      esVersion: "8.0.0"
