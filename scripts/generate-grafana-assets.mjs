@@ -60,6 +60,27 @@ function timeseries(id, title, x, y, w, h, expr, unit = "short") {
   };
 }
 
+function timeseriesTargets(id, title, x, y, w, h, targets, unit = "short") {
+  return {
+    id,
+    type: "timeseries",
+    title,
+    gridPos: { x, y, w, h },
+    datasource: prometheus,
+    targets: targets.map((target, index) => ({
+      refId: String.fromCharCode(65 + index),
+      expr: target.expr,
+      editorMode: "code",
+      legendFormat: target.legendFormat || "__auto",
+    })),
+    fieldConfig: { defaults: { unit }, overrides: [] },
+    options: {
+      legend: { displayMode: "table", placement: "bottom", showLegend: true },
+      tooltip: { mode: "multi", sort: "desc" },
+    },
+  };
+}
+
 function table(id, title, x, y, w, h, expr, unit = "short") {
   return {
     id,
@@ -216,6 +237,32 @@ const dashboards = [
       timeseries(5, "HTTP request rate", 0, 4, 12, 8, "sum by (service, route, status) (rate(http_requests_total[2m]))", "reqps"),
       timeseries(6, "Database query latency by operation", 12, 4, 12, 8, "histogram_quantile(0.95, sum by (operation, le) (rate(db_query_duration_seconds_bucket[5m])))", "s"),
       traces(7, "Recent login traces", 0, 12, 24, 9, '{ resource.service.name = "auth-service" && name =~ ".*login.*" }'),
+    ]),
+  ],
+  [
+    "frontend-performance.json",
+    dashboard("local-frontend-performance", "Frontend Performance", [
+      stat(1, "P75 FCP (First Contentful Paint)", 0, 0, 6, 4, "histogram_quantile(0.75, sum by (le) (rate(frontend_fcp_duration_ms_bucket[5m])))", "ms"),
+      stat(2, "P75 TTFP (Time to First Pixel / FP)", 6, 0, 6, 4, "histogram_quantile(0.75, sum by (le) (rate(frontend_fp_duration_ms_bucket[5m])))", "ms"),
+      stat(3, "P75 LCP (Largest Contentful Paint)", 12, 0, 6, 4, "histogram_quantile(0.75, sum by (le) (rate(frontend_lcp_duration_ms_bucket[5m])))", "ms"),
+      stat(4, "P75 TTI (Time to Interactive)", 18, 0, 6, 4, "histogram_quantile(0.75, sum by (le) (rate(frontend_tti_duration_ms_bucket[5m])))", "ms"),
+      stat(5, "P75 TBT (Total Blocking Time)", 0, 4, 6, 4, "histogram_quantile(0.75, sum by (le) (rate(frontend_tbt_duration_ms_bucket[5m])))", "ms"),
+      stat(6, "P75 CLS (Cumulative Layout Shift)", 6, 4, 6, 4, "histogram_quantile(0.75, sum by (le) (rate(frontend_cls_score_bucket[5m])))", "short"),
+      stat(7, "P75 INP (Interaction to Next Paint)", 12, 4, 6, 4, "histogram_quantile(0.75, sum by (le) (rate(frontend_inp_duration_ms_bucket[5m])))", "ms"),
+      stat(8, "P75 TTFB (Time to First Byte)", 18, 4, 6, 4, "histogram_quantile(0.75, sum by (le) (rate(frontend_ttfb_duration_ms_bucket[5m])))", "ms"),
+      timeseriesTargets(9, "Core Web Vitals Over Time (FCP, LCP, TTFB)", 0, 8, 24, 8, [
+        { expr: "histogram_quantile(0.75, sum by (le) (rate(frontend_fcp_duration_ms_bucket[5m])))", legendFormat: "FCP p75" },
+        { expr: "histogram_quantile(0.75, sum by (le) (rate(frontend_lcp_duration_ms_bucket[5m])))", legendFormat: "LCP p75" },
+        { expr: "histogram_quantile(0.75, sum by (le) (rate(frontend_ttfb_duration_ms_bucket[5m])))", legendFormat: "TTFB p75" },
+        { expr: "histogram_quantile(0.75, sum by (le) (rate(frontend_fp_duration_ms_bucket[5m])))", legendFormat: "FP p75" },
+      ], "ms"),
+      timeseriesTargets(10, "Page Load Time by Route (p50 / p95)", 0, 16, 12, 8, [
+        { expr: "histogram_quantile(0.50, sum by (route, le) (rate(frontend_page_load_duration_ms_bucket[5m])))", legendFormat: "p50 {{route}}" },
+        { expr: "histogram_quantile(0.95, sum by (route, le) (rate(frontend_page_load_duration_ms_bucket[5m])))", legendFormat: "p95 {{route}}" },
+      ], "ms"),
+      timeseries(11, "JS Error Rate", 12, 16, 12, 8, "sum by (type) (rate(frontend_js_errors_total[2m]))", "ops"),
+      timeseries(12, "Resource Load Times (JS / CSS / Images)", 0, 24, 12, 8, "histogram_quantile(0.75, sum by (resource_type, le) (rate(frontend_resource_load_duration_ms_bucket[5m])))", "ms"),
+      timeseries(13, "HTTP Request Rate from Browser", 12, 24, 12, 8, "sum by (service, route, status) (rate(http_requests_total[2m]))", "reqps"),
     ]),
   ],
 ];

@@ -23,6 +23,7 @@ configMapGenerator:
     files:
       - app-database.json=grafana/dashboards/app-database.json
       - app-login-flow.json=grafana/dashboards/app-login-flow.json
+      - frontend-performance.json=grafana/dashboards/frontend-performance.json
       - kubernetes-node-kubelet.json=grafana/dashboards/kubernetes-node-kubelet.json
       - kubernetes-pod-resources.json=grafana/dashboards/kubernetes-pod-resources.json
       - logs-traces.json=grafana/dashboards/logs-traces.json

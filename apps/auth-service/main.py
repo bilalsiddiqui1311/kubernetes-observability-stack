@@ -19,7 +19,7 @@ from opentelemetry.sdk.resources import SERVICE_NAME, Resource
 from opentelemetry.sdk.trace import TracerProvider
 from opentelemetry.sdk.trace.export import BatchSpanProcessor
 from prometheus_client import CONTENT_TYPE_LATEST, Counter, Histogram, generate_latest
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 
 SERVICE = os.getenv("SERVICE_NAME", "auth-service")
@@ -94,6 +94,79 @@ DB_LATENCY = Histogram(
     ["service", "operation"],
     buckets=(0.0025, 0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1),
 )
+FRONTEND_DURATION_BUCKETS_MS = (
+    25,
+    50,
+    100,
+    200,
+    300,
+    500,
+    750,
+    1000,
+    1500,
+    2000,
+    3000,
+    5000,
+    10000,
+)
+FRONTEND_CLS_BUCKETS = (0.001, 0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1, 2)
+FRONTEND_FCP = Histogram(
+    "frontend_fcp_duration_ms",
+    "Browser first contentful paint in milliseconds.",
+    buckets=FRONTEND_DURATION_BUCKETS_MS,
+)
+FRONTEND_FP = Histogram(
+    "frontend_fp_duration_ms",
+    "Browser first paint in milliseconds.",
+    buckets=FRONTEND_DURATION_BUCKETS_MS,
+)
+FRONTEND_LCP = Histogram(
+    "frontend_lcp_duration_ms",
+    "Browser largest contentful paint in milliseconds.",
+    buckets=FRONTEND_DURATION_BUCKETS_MS,
+)
+FRONTEND_TTI = Histogram(
+    "frontend_tti_duration_ms",
+    "Browser time to interactive in milliseconds.",
+    buckets=FRONTEND_DURATION_BUCKETS_MS,
+)
+FRONTEND_TBT = Histogram(
+    "frontend_tbt_duration_ms",
+    "Browser total blocking time in milliseconds.",
+    buckets=FRONTEND_DURATION_BUCKETS_MS,
+)
+FRONTEND_CLS = Histogram(
+    "frontend_cls_score",
+    "Browser cumulative layout shift score.",
+    buckets=FRONTEND_CLS_BUCKETS,
+)
+FRONTEND_INP = Histogram(
+    "frontend_inp_duration_ms",
+    "Browser interaction to next paint in milliseconds.",
+    buckets=FRONTEND_DURATION_BUCKETS_MS,
+)
+FRONTEND_TTFB = Histogram(
+    "frontend_ttfb_duration_ms",
+    "Browser time to first byte in milliseconds.",
+    buckets=FRONTEND_DURATION_BUCKETS_MS,
+)
+FRONTEND_PAGE_LOAD = Histogram(
+    "frontend_page_load_duration_ms",
+    "Browser page load duration in milliseconds.",
+    ["route"],
+    buckets=FRONTEND_DURATION_BUCKETS_MS,
+)
+FRONTEND_RESOURCE_LOAD = Histogram(
+    "frontend_resource_load_duration_ms",
+    "Browser resource load duration in milliseconds.",
+    ["resource_type"],
+    buckets=FRONTEND_DURATION_BUCKETS_MS,
+)
+FRONTEND_JS_ERRORS = Counter(
+    "frontend_js_errors",
+    "Browser JavaScript errors.",
+    ["type"],
+)
 
 
 class LoginRequest(BaseModel):
@@ -106,11 +179,48 @@ class UiEvent(BaseModel):
     correlation_id: str | None = None
 
 
+class FrontendResourceTiming(BaseModel):
+    resource_type: str
+    duration_ms: float
+
+
+class FrontendJsError(BaseModel):
+    type: str = "runtime"
+    count: int = 1
+
+
+class FrontendMetrics(BaseModel):
+    route: str = "/"
+    fcp_ms: float | None = None
+    fp_ms: float | None = None
+    lcp_ms: float | None = None
+    tti_ms: float | None = None
+    tbt_ms: float | None = None
+    cls_score: float | None = None
+    inp_ms: float | None = None
+    ttfb_ms: float | None = None
+    page_load_ms: float | None = None
+    resource_timings: list[FrontendResourceTiming] = Field(default_factory=list)
+    js_errors: list[FrontendJsError] = Field(default_factory=list)
+
+
 def current_trace_id() -> str:
     context = trace.get_current_span().get_span_context()
     if context.is_valid:
         return f"{context.trace_id:032x}"
     return ""
+
+
+def safe_observe(metric: Histogram, value: float | None) -> bool:
+    if value is None or value < 0:
+        return False
+    metric.observe(min(value, 60000))
+    return True
+
+
+def bounded_label(value: str, fallback: str, limit: int = 80) -> str:
+    cleaned = value.strip()[:limit]
+    return cleaned or fallback
 
 
 def ensure_schema() -> None:
@@ -230,6 +340,64 @@ async def ui_event(payload: UiEvent, request: Request) -> dict[str, str]:
         logger.info(event)
         await send_logstash(event)
     return {"ok": "true", "correlation_id": correlation_id}
+
+
+@app.post("/frontend-metrics")
+async def frontend_metrics(payload: FrontendMetrics, request: Request) -> dict[str, Any]:
+    correlation_id = request.headers.get("x-correlation-id") or str(uuid.uuid4())
+    route = bounded_label(payload.route, "/")
+    observed: list[str] = []
+
+    with tracer.start_as_current_span("frontend.metrics") as span:
+        span.set_attribute("correlation_id", correlation_id)
+        span.set_attribute("frontend.route", route)
+
+        for name, metric, value in (
+            ("fcp", FRONTEND_FCP, payload.fcp_ms),
+            ("fp", FRONTEND_FP, payload.fp_ms),
+            ("lcp", FRONTEND_LCP, payload.lcp_ms),
+            ("tti", FRONTEND_TTI, payload.tti_ms),
+            ("tbt", FRONTEND_TBT, payload.tbt_ms),
+            ("cls", FRONTEND_CLS, payload.cls_score),
+            ("inp", FRONTEND_INP, payload.inp_ms),
+            ("ttfb", FRONTEND_TTFB, payload.ttfb_ms),
+        ):
+            if safe_observe(metric, value):
+                observed.append(name)
+
+        if payload.page_load_ms is not None and payload.page_load_ms >= 0:
+            FRONTEND_PAGE_LOAD.labels(route).observe(min(payload.page_load_ms, 60000))
+            observed.append("page_load")
+
+        for resource in payload.resource_timings[:50]:
+            if resource.duration_ms >= 0:
+                resource_type = bounded_label(resource.resource_type, "other", 40)
+                FRONTEND_RESOURCE_LOAD.labels(resource_type).observe(
+                    min(resource.duration_ms, 60000)
+                )
+                observed.append(f"resource:{resource_type}")
+
+        if payload.js_errors:
+            for error in payload.js_errors[:20]:
+                error_count = max(0, min(error.count, 1000))
+                FRONTEND_JS_ERRORS.labels(bounded_label(error.type, "runtime", 40)).inc(
+                    error_count
+                )
+                observed.append(f"js_error:{error.type}")
+        else:
+            FRONTEND_JS_ERRORS.labels("runtime").inc(0)
+
+        event = {
+            "event": "frontend_metrics",
+            "correlation_id": correlation_id,
+            "route": route,
+            "observed": observed,
+            "trace_id": current_trace_id(),
+        }
+        logger.info(event)
+        await send_logstash(event)
+
+    return {"ok": True, "correlation_id": correlation_id, "observed": len(observed)}
 
 
 @app.post("/login")
@@ -358,4 +526,3 @@ def admin_stats() -> dict[str, Any]:
         "max_login_ms": totals[3],
         "last_login_at": totals[4].isoformat() if totals[4] else None,
     }
-

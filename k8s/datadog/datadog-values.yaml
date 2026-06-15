@@ -1,0 +1,50 @@
+datadog:
+  apiKeyExistingSecret: datadog-secret
+  clusterName: local-platform
+  site: datadoghq.com
+  tags:
+    - env:local
+    - platform:kubernetes-setup
+    - cluster:local-platform
+
+  collectEvents: true
+
+  logs:
+    enabled: true
+    containerCollectAll: true
+    containerCollectUsingFiles: true
+
+  apm:
+    socketEnabled: false
+    portEnabled: true
+
+  otlp:
+    receiver:
+      protocols:
+        grpc:
+          enabled: true
+          endpoint: "0.0.0.0:4317"
+          useHostPort: true
+        http:
+          enabled: true
+          endpoint: "0.0.0.0:4318"
+          useHostPort: true
+    logs:
+      enabled: true
+
+  kubeStateMetricsCore:
+    enabled: true
+
+  processAgent:
+    processCollection: false
+    containerCollection: true
+
+  orchestratorExplorer:
+    enabled: true
+
+clusterAgent:
+  enabled: true
+  admissionController:
+    enabled: true
+    configMode: hostip
+    mutateUnlabelled: false

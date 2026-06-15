@@ -8,6 +8,7 @@ This workspace contains a complete local Kubernetes setup for:
 - `profile-service`: backend microservice called by `auth-service`
 - `postgres`: local PostgreSQL database
 - Observability: Prometheus, Grafana, Tempo traces, Elasticsearch, Logstash, and Kibana
+- Optional Datadog, New Relic, and SigNoz deployments for comparing observability platforms
 
 ## Quick Start
 
@@ -74,3 +75,46 @@ GF_SMTP_FROM_ADDRESS=grafana@example.com \
 kubectl -n local-app get pods
 kubectl -n observability get pods
 ```
+
+## Datadog
+
+Datadog is a hosted observability platform for infrastructure metrics, Kubernetes state, logs, traces, dashboards, and monitors. This repo includes an optional Helm-based Datadog Agent deployment:
+
+```bash
+./scripts/minikube-up.sh
+DD_API_KEY=<your-api-key> ./scripts/deploy-datadog.sh
+./scripts/datadog-status.sh
+```
+
+The deployment keeps the API key in a Kubernetes secret named `datadog-secret`, enables Kubernetes events, container logs, live containers, Orchestrator Explorer, and OpenMetrics collection for `auth-service` and `profile-service`.
+
+See [docs/datadog-walkthrough.md](docs/datadog-walkthrough.md) for the learning path and walkthrough.
+
+## New Relic
+
+New Relic is a hosted observability platform for Kubernetes infrastructure, logs, events, metrics, dashboards, and alerts. This repo includes an optional Helm-based New Relic deployment:
+
+```bash
+./scripts/minikube-up.sh
+NEW_RELIC_LICENSE_KEY=<your-license-key> ./scripts/deploy-newrelic.sh
+./scripts/newrelic-status.sh
+```
+
+The deployment keeps the license key in a Kubernetes secret named `newrelic-license-key`, enables Kubernetes events, container logs, kube-state-metrics, metadata injection, and Prometheus scraping for the local app services.
+
+See [docs/newrelic-walkthrough.md](docs/newrelic-walkthrough.md) for the learning path and walkthrough.
+
+## SigNoz
+
+SigNoz is an OpenTelemetry-native observability platform that can be self-hosted or used as SigNoz Cloud. This repo includes an optional self-hosted Kubernetes deployment:
+
+```bash
+MINIKUBE_MEMORY=8192 MINIKUBE_CPUS=4 ./scripts/minikube-up.sh
+./scripts/deploy-signoz.sh
+./scripts/signoz-status.sh
+kubectl -n signoz port-forward svc/signoz 3301:8080
+```
+
+The deployment installs the SigNoz platform, ClickHouse storage, the SigNoz OpenTelemetry collector, and the SigNoz Kubernetes infrastructure collector. Open the UI at `http://localhost:3301`.
+
+See [docs/signoz-walkthrough.md](docs/signoz-walkthrough.md) for the learning path and walkthrough.

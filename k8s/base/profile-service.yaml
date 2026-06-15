@@ -14,6 +14,34 @@ spec:
     metadata:
       labels:
         app: profile-service
+        tags.datadoghq.com/env: local
+        tags.datadoghq.com/service: profile-service
+        tags.datadoghq.com/version: dev
+      annotations:
+        newrelic.io/scrape: "true"
+        prometheus.io/scrape: "true"
+        prometheus.io/path: /metrics
+        prometheus.io/port: "8000"
+        signoz.io/scrape: "true"
+        signoz.io/path: /metrics
+        signoz.io/port: "8000"
+        ad.datadoghq.com/profile-service.checks: |
+          {
+            "openmetrics": {
+              "init_config": {},
+              "instances": [
+                {
+                  "openmetrics_endpoint": "http://%%host%%:%%port%%/metrics",
+                  "namespace": "local_app",
+                  "metrics": [
+                    "http_requests_total",
+                    "http_request_duration_seconds.*",
+                    "db_query_duration_seconds.*"
+                  ]
+                }
+              ]
+            }
+          }
     spec:
       containers:
         - name: profile-service
@@ -59,4 +87,3 @@ spec:
     - name: http
       port: 8000
       targetPort: 8000
-

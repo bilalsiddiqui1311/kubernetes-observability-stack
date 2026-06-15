@@ -1,0 +1,30 @@
+global:
+  cluster: local-platform
+  customSecretName: newrelic-license-key
+  customSecretLicenseKey: licenseKey
+  lowDataMode: true
+  customAttributes:
+    environment: local
+    platform: kubernetes-setup
+
+newrelic-infrastructure:
+  enabled: true
+
+nri-metadata-injection:
+  enabled: true
+
+nri-kube-events:
+  enabled: true
+
+newrelic-logging:
+  enabled: true
+
+kube-state-metrics:
+  enabled: true
+
+newrelic-prometheus-agent:
+  enabled: true
+  config:
+    kubernetes:
+      integrations_filter:
+        enabled: false

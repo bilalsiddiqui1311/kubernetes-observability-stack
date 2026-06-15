@@ -1,0 +1,20 @@
+global:
+  storageClass: standard
+  clusterName: local-platform
+  cloud: other
+
+clusterName: local-platform
+
+clickhouse:
+  persistence:
+    enabled: true
+    size: 20Gi
+
+signoz:
+  service:
+    type: ClusterIP
+    port: 8080
+
+otelCollector:
+  service:
+    type: ClusterIP
